@@ -23,6 +23,8 @@
                             // Máxima de 3.6 MHz con VDD = 5V, 1.2 MHz con VDD = 2.7V
 #define ADC_CHANNEL       0	// Canal A/D del MCP3002 a usar, 0 ó 1
 
+
+//Variables
 uint16_t get_ADC(int channel);	
 float voltajeadc=0;
 uint32_t time_on=0;
@@ -51,6 +53,7 @@ uint32_t timestamp (void){
     
 }
 
+//Timestep
 void update_timestamp (void){
     
      time_t timer;
@@ -98,8 +101,7 @@ uint8_t conectar_servidor (void){
 	puts(server_reply); 
 }
 
-
-
+//Funciones para orden de eventos
 void listar_eventos(void){
     int i;
     printf("listado eventos\n");
@@ -120,6 +122,7 @@ void agregar_evento(char * msg){
     }
 }
 
+//Funciones de alarma
 void alarma_bajo_voltaje (void){
     char mensaje[64];
     static uint8_t last_alarm_status=0; 
@@ -174,6 +177,7 @@ void alarma_boton1 (void){
     }
 }
 
+//Funcion principal
 int main(void)
 {
     uint16_t ADCvalue;
