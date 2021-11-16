@@ -19,8 +19,6 @@ int PUSH1 = 0;
 int PUSH2 = 0;
 int FLG1 = 0;
 int FLG2 = 0;
-int SW1 = 0;
-int SW2 = 0;
 
 void Button1(void); 
 void Button2(void); 
@@ -74,13 +72,11 @@ void Button2(void){
 }
 
 void Switch1(void){
-	SW1 = digitalRead(19);
 	printf("Switch 1 funciona interrupción funcionando\n");
 	fflush(stdout);
 }
 
 void Switch2(void){
-	SW2 = digitalRead(26);
 	printf("Switch 2 funciona interrupción funcionando\n");
 	fflush(stdout);
 }
