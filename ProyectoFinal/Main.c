@@ -35,20 +35,19 @@ char eventos_pendientes[MAX_NEVENTOS+1][64];
 uint16_t n_eventos_pendientes_envio =0;
 uint8_t boton1 =0;
 uint8_t boton2 =0;
-uint8_t interruptor1 =0;
-uint8_t interruptor2 =0;
 
+int A;
 int PUSH1 = 0;
 int PUSH2 = 0;
 int FLG1 = 0;
 int FLG2 = 0;
+int FLGB = 0;
 
 //funciones
 void Button1(void); 
 void Button2(void); 
 void Switch1(void);
 void Switch2(void);
-
 
 
 int socket_desc;
@@ -85,7 +84,7 @@ uint8_t conectar_servidor (void){
     socket_desc = socket(AF_INET , SOCK_STREAM , 0);
 	if (socket_desc == -1) printf("No pude crear socket");
 		
-	server.sin_addr.s_addr = inet_addr("199.250.222.55");
+	server.sin_addr.s_addr = inet_addr("192.168.0.255");
 	server.sin_family = AF_INET;
 	server.sin_port = htons(80);
 
@@ -145,11 +144,13 @@ void alarma_bajo_voltaje (void){
             sprintf (mensaje,"Alarma de bajo voltaje detectado\t %0.2f", voltajeadc);
             agregar_evento(mensaje);
             last_alarm_status =1;
+            FLGB = 1;
         }
 
     }
     else {
         last_alarm_status=0;
+        FLGB = 0;
     }
 }
 
@@ -163,45 +164,39 @@ void alarma_alto_voltaje (void){
             sprintf (mensaje,"Alarma de alto voltaje detectado\t %0.2f", voltajeadc);
             agregar_evento(mensaje);
             last_alarm_status =1;
-        }
+            FLGB = 1;
+       }
 
     }
     else {
         last_alarm_status=0;
+        FLGB = 0;
     }
 }
-/*
-void alarma_boton1 (void){
-    char mensaje[64];
-    static uint8_t last_boton_status=0; 
-    
-    if (boton1 == 1 ){
-        if(last_boton_status == 0){
-           //printf ("%ld\t %s\t Alarma de bajo voltaje detectado\t %0.2f\n", time_on, timestamp_str, voltajeadc);
-            sprintf (mensaje,"Alarma de boton1 presionado detectado\t %0.2f", voltajeadc);
-            agregar_evento(mensaje);
-            last_boton_status =1;
-        }
 
-    }
-    else {
-        last_boton_status=0;
+void bocina(void){
+    if(FLGB==1){
+        digitalWrite(13, HIGH);
+        delay(A);
+        digitalWrite(13, LOW);
+        delay(A);        
     }
 }
-*/
+
 //Funcion principal
 int main(void){
-
     wiringPiSetupGpio();
     pinMode(5, INPUT);
 	pinMode(17, INPUT);
 	pinMode(19, INPUT);
 	pinMode(26, INPUT);
-    pinMode(24,OUTPUT);
+    pinMode(13,OUTPUT);
+    A = (1/1760)/2;
     pullUpDnControl(5, PUD_UP);
 	pullUpDnControl(17, PUD_UP);
 	pullUpDnControl(19, PUD_UP);
 	pullUpDnControl(26, PUD_UP);
+    digitalWrite(13, LOW);
 
 	wiringPiISR(5, INT_EDGE_BOTH, (void*)&Button1);
 	wiringPiISR(17, INT_EDGE_BOTH, (void*)&Button2);
@@ -237,7 +232,8 @@ int main(void){
         printf("%ld\t%s\t%0.2f\n", time_on, timestamp_str,voltajeadc);
         alarma_bajo_voltaje();
         alarma_alto_voltaje();
-        alarma_boton1();
+        bocina();
+
 		fflush(stdout);
         if ((time_on % 20 )==0){
             printf("Eventos pendientes:\n");
