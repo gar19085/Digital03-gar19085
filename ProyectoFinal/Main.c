@@ -17,12 +17,12 @@
 #include <string.h>
 #include<sys/socket.h>
 #include<arpa/inet.h>
+//#include <pthread.h>
 
 #define SPI_CHANNEL	      0	// Canal SPI de la Raspberry Pi, 0 ó 1
 #define SPI_SPEED 	1500000	// Velocidad de la comunicación SPI (reloj, en HZ)
                             // Máxima de 3.6 MHz con VDD = 5V, 1.2 MHz con VDD = 2.7V
 #define ADC_CHANNEL       0	// Canal A/D del MCP3002 a usar, 0 ó 1
-
 
 //Variables
 uint16_t get_ADC(int channel);	
@@ -78,7 +78,7 @@ void update_timestamp (void){
  
     return ;
 }
-
+/*
 uint8_t conectar_servidor (void){
     
     socket_desc = socket(AF_INET , SOCK_STREAM , 0);
@@ -111,7 +111,7 @@ uint8_t conectar_servidor (void){
 	puts("Reply received\n");
 	puts(server_reply); 
 }
-
+*/
 //Funciones para orden de eventos
 void listar_eventos(void){
     int i;
@@ -174,6 +174,9 @@ void alarma_alto_voltaje (void){
     }
 }
 
+/*
+
+
 void bocina(void){
     if(FLGB==1){
         digitalWrite(13, HIGH);
@@ -182,7 +185,7 @@ void bocina(void){
         delay(A);        
     }
 }
-
+*/
 //Funcion principal
 int main(void){
     wiringPiSetupGpio();
@@ -232,7 +235,12 @@ int main(void){
         printf("%ld\t%s\t%0.2f\n", time_on, timestamp_str,voltajeadc);
         alarma_bajo_voltaje();
         alarma_alto_voltaje();
-        bocina();
+        if(FLGB==1){
+            digitalWrite(13, HIGH);
+            delay(A);
+            digitalWrite(13, LOW);
+            delay(A);        
+        }
 
 		fflush(stdout);
         if ((time_on % 20 )==0){
@@ -271,10 +279,10 @@ uint16_t get_ADC(int ADC_chan)
 	return(resultado);
 }
 
-
 //Funciones de Interrupciones
 
 void Button1(void){
+    char mensaje[64];
 	PUSH2 = digitalRead(5);
 	if(PUSH2 == 0){
 		FLG1=1;
@@ -282,11 +290,13 @@ void Button1(void){
 	if(PUSH2 == 1 && FLG1 == 1){	
     	printf("Boton 1 funciona interrupción funcionando\n");
 		fflush(stdout);
+        agregar_evento(mensaje);
 		FLG1=0;
 	}
 }
 
 void Button2(void){
+    char mensaje[64];
 	PUSH1 = digitalRead(17);
 	if(PUSH1 == 0){
 		FLG2=1;
@@ -294,16 +304,21 @@ void Button2(void){
 	if(PUSH1 == 1 && FLG2 == 1){
     	printf("Boton 2 funciona interrupción funcionando\n");
 		fflush(stdout);
+        agregar_evento(mensaje);
 		FLG2=0;
 	}
 }
 
 void Switch1(void){
+    char mensaje[64];
 	printf("Switch 1 funciona interrupción funcionando\n");
 	fflush(stdout);
+    agregar_evento(mensaje);
 }
 
 void Switch2(void){
+    char mensaje[64];
 	printf("Switch 2 funciona interrupción funcionando\n");
 	fflush(stdout);
+    agregar_evento(mensaje);
 }
