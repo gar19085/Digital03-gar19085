@@ -4,7 +4,7 @@
 //FECHA: 10/11/2021
 //GABRIELA ALFARO
 //RODRIGO GARCIA
-
+//UTR
 
 
 #include <stdio.h>
@@ -15,14 +15,20 @@
 #include <wiringPiSPI.h>
 #include <time.h>
 #include <string.h>
-#include<sys/socket.h>
-#include<arpa/inet.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/ioctl.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <arpa/inet.h>
 //#include <pthread.h>
 
 #define SPI_CHANNEL	      0	// Canal SPI de la Raspberry Pi, 0 ó 1
 #define SPI_SPEED 	1500000	// Velocidad de la comunicación SPI (reloj, en HZ)
                             // Máxima de 3.6 MHz con VDD = 5V, 1.2 MHz con VDD = 2.7V
 #define ADC_CHANNEL       0	// Canal A/D del MCP3002 a usar, 0 ó 1
+
+#define MSG_SIZE 40			// message size
 
 //Variables
 uint16_t get_ADC(int channel);	
@@ -33,15 +39,24 @@ uint32_t numero_eventos=0;
 #define MAX_NEVENTOS 100
 char eventos_pendientes[MAX_NEVENTOS+1][64];
 uint16_t n_eventos_pendientes_envio =0;
-uint8_t boton1 =0;
-uint8_t boton2 =0;
 
+//Variables Boradcast
+int FLG;
+int OFL;
+int sockfd, n;
+int val;
+unsigned int length;
+char buffer[MSG_SIZE];	// to store received messages or messages to be sent.
+int boolval = 1;			// for a socket option
+
+//Variables ISR
 int A;
 int PUSH1 = 0;
 int PUSH2 = 0;
 int FLG1 = 0;
 int FLG2 = 0;
 int FLGB = 0;
+int FLGS1 = 0;
 
 //funciones
 void Button1(void); 
@@ -49,6 +64,13 @@ void Button2(void);
 void Switch1(void);
 void Switch2(void);
 
+void ej_strtok(char *);
+
+void error(const char *msg)
+{
+    perror(msg);
+    exit(0);
+}
 
 int socket_desc;
 	struct sockaddr_in server;
@@ -144,10 +166,18 @@ void alarma_bajo_voltaje (void){
             sprintf (mensaje,"Alarma de bajo voltaje detectado\t %0.2f", voltajeadc);
             agregar_evento(mensaje);
             last_alarm_status =1;
-            FLGB = 1;
         }
-
+        FLGB = 1;
+        if(FLGB == 1){
+            //last_alarm_status =1;
+            //FLGB = 1;
+            digitalWrite(13, HIGH);
+            delay(784);
+            digitalWrite(13, LOW);
+            delay(784);     
+        }    
     }
+
     else {
         last_alarm_status=0;
         FLGB = 0;
@@ -163,29 +193,26 @@ void alarma_alto_voltaje (void){
            //printf ("%ld\t %s\t Alarma de bajo voltaje detectado\t %0.2f\n", time_on, timestamp_str, voltajeadc);
             sprintf (mensaje,"Alarma de alto voltaje detectado\t %0.2f", voltajeadc);
             agregar_evento(mensaje);
-            last_alarm_status =1;
-            FLGB = 1;
+            last_alarm_status =1;         
        }
+        FLGB = 1;
+        if(FLGB == 1){
+            //last_alarm_status =1;
+            //FLGB = 1;
+            digitalWrite(13, HIGH);
+            delay(A);
+            digitalWrite(13, LOW);
+            delay(A);     
+            }              
 
     }
-    else {
+    else{
         last_alarm_status=0;
         FLGB = 0;
     }
 }
 
-/*
 
-
-void bocina(void){
-    if(FLGB==1){
-        digitalWrite(13, HIGH);
-        delay(A);
-        digitalWrite(13, LOW);
-        delay(A);        
-    }
-}
-*/
 //Funcion principal
 int main(void){
     wiringPiSetupGpio();
@@ -206,25 +233,19 @@ int main(void){
 	wiringPiISR(19, INT_EDGE_BOTH, (void*)&Switch1);
 	wiringPiISR(26, INT_EDGE_BOTH, (void*)&Switch2);
 
-    uint16_t ADCvalue;
-	//conectar_servidor();
-    //return 0;
-    
-	// Configura el SPI en la RPi
 	if(wiringPiSPISetup(SPI_CHANNEL, SPI_SPEED) < 0) {
 		printf("wiringPiSPISetup falló.\n");
 		return(-1);
 	}
 
+    uint16_t ADCvalue;
+	//conectar_servidor();
+    //return 0;
+    
+	// Configura el SPI en la RPi
+
 	while(1){
         time_on++;
-        
-        if ((time_on % 5 )==0){
-            boton1=1;
-        }
-            else {
-                boton1=0;
-            }
         
         update_timestamp();
 		ADCvalue = get_ADC(ADC_CHANNEL);
@@ -235,12 +256,7 @@ int main(void){
         printf("%ld\t%s\t%0.2f\n", time_on, timestamp_str,voltajeadc);
         alarma_bajo_voltaje();
         alarma_alto_voltaje();
-        if(FLGB==1){
-            digitalWrite(13, HIGH);
-            delay(A);
-            digitalWrite(13, LOW);
-            delay(A);        
-        }
+
 
 		fflush(stdout);
         if ((time_on % 20 )==0){
@@ -252,6 +268,9 @@ int main(void){
      
   return 0;   
 }
+
+
+
 
 // Entrada: ADC_chan 0
 // Salida: un entero "unsigned" de 16 bit  con el valor de la conversión
