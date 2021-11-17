@@ -38,6 +38,18 @@ uint8_t boton2 =0;
 uint8_t interruptor1 =0;
 uint8_t interruptor2 =0;
 
+int PUSH1 = 0;
+int PUSH2 = 0;
+int FLG1 = 0;
+int FLG2 = 0;
+
+//funciones
+void Button1(void); 
+void Button2(void); 
+void Switch1(void);
+void Switch2(void);
+
+
 
 int socket_desc;
 	struct sockaddr_in server;
@@ -158,7 +170,7 @@ void alarma_alto_voltaje (void){
         last_alarm_status=0;
     }
 }
-
+/*
 void alarma_boton1 (void){
     char mensaje[64];
     static uint8_t last_boton_status=0; 
@@ -176,13 +188,29 @@ void alarma_boton1 (void){
         last_boton_status=0;
     }
 }
-
+*/
 //Funcion principal
-int main(void)
-{
+int main(void){
+
+    wiringPiSetupGpio();
+    pinMode(5, INPUT);
+	pinMode(17, INPUT);
+	pinMode(19, INPUT);
+	pinMode(26, INPUT);
+    pinMode(24,OUTPUT);
+    pullUpDnControl(5, PUD_UP);
+	pullUpDnControl(17, PUD_UP);
+	pullUpDnControl(19, PUD_UP);
+	pullUpDnControl(26, PUD_UP);
+
+	wiringPiISR(5, INT_EDGE_BOTH, (void*)&Button1);
+	wiringPiISR(17, INT_EDGE_BOTH, (void*)&Button2);
+	wiringPiISR(19, INT_EDGE_BOTH, (void*)&Switch1);
+	wiringPiISR(26, INT_EDGE_BOTH, (void*)&Switch2);
+
     uint16_t ADCvalue;
 	//conectar_servidor();
-    return 0;
+    //return 0;
     
 	// Configura el SPI en la RPi
 	if(wiringPiSPISetup(SPI_CHANNEL, SPI_SPEED) < 0) {
@@ -203,9 +231,9 @@ int main(void)
         update_timestamp();
 		ADCvalue = get_ADC(ADC_CHANNEL);
     
-		printf("Valor de la conversión: %d\n", ADCvalue);
-        printf("%ld\t%0.2f\n", time_on, voltajeadc);
-        printf("%ld\t%ld\t%0.2f\n", time_on, timestamp(),voltajeadc);
+		//printf("Valor de la conversión: %d\n", ADCvalue);
+        //printf("%ld\t%0.2f\n", time_on, voltajeadc);
+        //printf("%ld\t%ld\t%0.2f\n", time_on, timestamp(),voltajeadc);
         printf("%ld\t%s\t%0.2f\n", time_on, timestamp_str,voltajeadc);
         alarma_bajo_voltaje();
         alarma_alto_voltaje();
@@ -245,4 +273,41 @@ uint16_t get_ADC(int ADC_chan)
     voltajeadc=(resultado*3.3)/1023.0;
 	
 	return(resultado);
+}
+
+
+//Funciones de Interrupciones
+
+void Button1(void){
+	PUSH2 = digitalRead(5);
+	if(PUSH2 == 0){
+		FLG1=1;
+	}		
+	if(PUSH2 == 1 && FLG1 == 1){	
+    	printf("Boton 1 funciona interrupción funcionando\n");
+		fflush(stdout);
+		FLG1=0;
+	}
+}
+
+void Button2(void){
+	PUSH1 = digitalRead(17);
+	if(PUSH1 == 0){
+		FLG2=1;
+	}	
+	if(PUSH1 == 1 && FLG2 == 1){
+    	printf("Boton 2 funciona interrupción funcionando\n");
+		fflush(stdout);
+		FLG2=0;
+	}
+}
+
+void Switch1(void){
+	printf("Switch 1 funciona interrupción funcionando\n");
+	fflush(stdout);
+}
+
+void Switch2(void){
+	printf("Switch 2 funciona interrupción funcionando\n");
+	fflush(stdout);
 }

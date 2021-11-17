@@ -47,6 +47,7 @@ int main(void){
 	
 }
 
+
 void Button1(void){
 	PUSH2 = digitalRead(5);
 	if(PUSH2 == 0){
