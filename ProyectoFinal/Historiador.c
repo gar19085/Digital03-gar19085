@@ -19,11 +19,20 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <arpa/inet.h>
-//#include <pthread.h>
+#include <pthread.h>
 
 #define MSG_SIZE 40			// message size
-#define IPUTR1 "192.168.0.68"
 
+
+char buffer[MSG_SIZE];	// to store received messages or messages to be sent.
+int sockfd, n;
+unsigned int length;
+struct sockaddr_in server, addr;
+int boolval = 1;			// for a socket option
+
+
+void recibir(void*ptr);
+void enviar(void*ptr);
 void ej_strtok(char *);
 
 void error(const char *msg)
@@ -32,16 +41,42 @@ void error(const char *msg)
     exit(0);
 }
 
+void recibir(void*ptr){
+	memset(buffer, 0, MSG_SIZE);	// sets all values to zero.
+	
+	// receive from a client
+	n = recvfrom(sockfd, buffer, MSG_SIZE, 0, (struct sockaddr *)&addr, &length);
+    if(n < 0)
+	error("recvfrom"); 
+
+}
+
+void enviar(void*ptr){
+	memset(buffer, 0, MSG_SIZE);	// sets all values to zero.
+	
+	// receive from a client
+	n = sendto(sockfd, "Got a message. Was it from you?\n", MSG_SIZE, 0,
+        (struct sockaddr *)&addr, length);
+	    if(n < 0)
+	 	error("sendto");
+
+}
+
+
 int main(int argc, char *argv[])
 {
+	printf("Los comandos son:\n");
+	
+	
+	pthread_t thrd1, thrd2;
+	pthread_create(&thrd1, NULL, (void*)&recibir, NULL);
+	pthread_create(&thrd2, NULL, (void*)&enviar, NULL);
+    pthread_join(thrd1, NULL);
+	pthread_join(thrd2, NULL);
+	
 	int FLG;
 	int OFL;
-	int sockfd, n;
 	int val;
-	unsigned int length;
-	struct sockaddr_in server, addr;
-	char buffer[MSG_SIZE];	// to store received messages or messages to be sent.
-	int boolval = 1;			// for a socket option
 
 	srand(time(0));
 
@@ -57,7 +92,7 @@ int main(int argc, char *argv[])
 
 	server.sin_family = AF_INET;		// symbol constant for Internet domain
 	server.sin_port = htons(atoi(argv[1]));		// port number
-	server.sin_addr.s_addr = inet_addr("192.168.1.255");	// para recibir de cualquier interfaz de red
+	//server.sin_addr.s_addr = inet_addr("192.168.1.255");	// para recibir de cualquier interfaz de red
 
 	length = sizeof(server);			// size of structure
 
@@ -87,8 +122,47 @@ int main(int argc, char *argv[])
 	    //n = sendto(sockfd, "Got a message. Was it from you?\n", MSG_SIZE, 0,
     	//	      (struct sockaddr *)&addr, length);
 	    
+		if(n < 0)
+	 		error("sendto");
+
+		if((strcmp(buffer, "VOTE\n"))==0){
+			printf("Se recibio VOTE\n");
+			fflush(stdout);
+			val = (rand()%10 ) + 1;
+			//printf("%d", val);
+			sprintf(VO, "# 192.168.1.34 %d", val);
+			fflush(stdout);
+			OFL = 0;
+			n = sendto(sockfd, VO, MSG_SIZE, 0,
+				(struct sockaddr *)&server, length);
+			if(n < 0)
+			error("sendto");
+		}
+	/*
+		else if((strcmp(buffer, "QUIEN ES\n"))==0){
+			printf("Se recibio QUIEN ES\n");
+			fflush(stdout);	
+			if(FLG == 1 && OFL == 0){
+				n = sendto(sockfd, "Rodrigo Garcia es el master\n", MSG_SIZE, 0,
+				(struct sockaddr *)&addr, length);
+			if(FLG < 0)
+			error("sendto");		
+			}
+			if(FLG == 0 && OFL == 0){
+				n = sendto(sockfd, "Rodrigo Garcia es el master\n", MSG_SIZE, 0,
+				(struct sockaddr *)&addr, length);
+			if(FLG < 0)
+			error("sendto");		
+			}								
+		}*/
+			 
+		else{
+			printf("Se recibio basura\n");
+			fflush(stdout);
+		}
+
 	    //printf("Despues de enviar\n");
+	}
 
 	return 0;
  }
-

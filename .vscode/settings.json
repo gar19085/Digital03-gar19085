@@ -1,5 +1,6 @@
 {
     "files.associations": {
-        "Lab01.C": "cpp"
+        "Lab01.C": "cpp",
+        "in.h": "c"
     }
 }

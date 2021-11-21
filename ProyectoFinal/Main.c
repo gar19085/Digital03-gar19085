@@ -172,9 +172,9 @@ void alarma_bajo_voltaje (void){
             //last_alarm_status =1;
             //FLGB = 1;
             digitalWrite(13, HIGH);
-            delay(784);
+            delay(A);
             digitalWrite(13, LOW);
-            delay(784);     
+            delay(A);     
         }    
     }
 
@@ -226,7 +226,6 @@ int main(void){
 	pullUpDnControl(17, PUD_UP);
 	pullUpDnControl(19, PUD_UP);
 	pullUpDnControl(26, PUD_UP);
-    digitalWrite(13, LOW);
 
 	wiringPiISR(5, INT_EDGE_BOTH, (void*)&Button1);
 	wiringPiISR(17, INT_EDGE_BOTH, (void*)&Button2);
