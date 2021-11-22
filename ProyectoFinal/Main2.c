@@ -1,12 +1,3 @@
-//UNIVERSIDAD DEL VALLE DE GUATEMALA
-//DIGITAL 3
-//PROYECTO FINAL
-//FECHA: 10/11/2021
-//GABRIELA ALFARO
-//RODRIGO GARCIA
-//UTR
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -15,20 +6,16 @@
 #include <wiringPiSPI.h>
 #include <time.h>
 #include <string.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/ioctl.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <arpa/inet.h>
-//#include <pthread.h>
+#include<sys/socket.h>
+#include<arpa/inet.h>
+#include <pthread.h>
 
 #define SPI_CHANNEL	      0	// Canal SPI de la Raspberry Pi, 0 ó 1
 #define SPI_SPEED 	1500000	// Velocidad de la comunicación SPI (reloj, en HZ)
                             // Máxima de 3.6 MHz con VDD = 5V, 1.2 MHz con VDD = 2.7V
 #define ADC_CHANNEL       0	// Canal A/D del MCP3002 a usar, 0 ó 1
+#define MSG_SIZE 40	
 
-#define MSG_SIZE 40			// message size
 
 //Variables
 uint16_t get_ADC(int channel);	
@@ -39,30 +26,39 @@ uint32_t numero_eventos=0;
 #define MAX_NEVENTOS 100
 char eventos_pendientes[MAX_NEVENTOS+1][64];
 uint16_t n_eventos_pendientes_envio =0;
+uint8_t boton1 =0;
+uint8_t boton2 =0;
 
-//Variables Boradcast
-int FLG;
-int OFL;
-int sockfd, n;
-int val;
-unsigned int length;
-char buffer[MSG_SIZE];	// to store received messages or messages to be sent.
-int boolval = 1;			// for a socket option
-
-//Variables ISR
 int A;
 int PUSH1 = 0;
 int PUSH2 = 0;
 int FLG1 = 0;
 int FLG2 = 0;
 int FLGB = 0;
-int FLGS1 = 0;
+
+
+int FLG;
+int OFL;
+int sockfd, n;
+int val;
+unsigned int length;
+struct sockaddr_in server, addr;
+char buffer[MSG_SIZE];	// to store received messages or messages to be sent.
+int boolval = 1;	
 
 //funciones
 void Button1(void); 
 void Button2(void); 
 void Switch1(void);
 void Switch2(void);
+void iotarduino(void);
+/*
+int socket_desc;
+	struct sockaddr_in server;
+	char *message;
+    char server_reply[2000];
+*/
+void RTU2(int argc, char *argv[]);
 
 void ej_strtok(char *);
 
@@ -72,10 +68,93 @@ void error(const char *msg)
     exit(0);
 }
 
-int socket_desc;
-	struct sockaddr_in server;
-	char *message;
-    char server_reply[2000];
+//Conexión con historiador
+void RTU2(int argc, char *argv[]){
+	srand(time(0));
+
+	if(argc != 2)
+	{
+		printf("usage: %s port\n", argv[0]);
+		exit(0);
+	}
+	sockfd = socket(AF_INET, SOCK_DGRAM, 0); // Creates socket. Connectionless.
+	if(sockfd < 0)
+		error("Opening socket");
+
+	server.sin_family = AF_INET;		// symbol constant for Internet domain
+	server.sin_port = htons(atoi(argv[1]));		// port number
+	server.sin_addr.s_addr = htonl(INADDR_ANY); //inet_addr("192.168.1.255");	// para recibir de cualquier interfaz de red
+
+	length = sizeof(server);			// size of structure
+
+	// binds the socket to the address of the host and the port number
+	if(bind(sockfd, (struct sockaddr *)&server, length) < 0)
+		error("Error binding socket.");
+
+	// change socket permissions to allow broadcast
+	if(setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, &boolval, sizeof(boolval)) < 0)
+   		error("Error setting socket options\n");
+
+   	server.sin_addr.s_addr = inet_addr("192.168.0.255");
+
+	while(1)
+	{
+		memset(buffer, 0, MSG_SIZE);	// sets all values to zero.
+		
+		// receive from a client
+		n = recvfrom(sockfd, buffer, MSG_SIZE, 0, (struct sockaddr *)&addr, &length);
+	    if(n < 0)
+	 		error("recvfrom"); 
+
+	    printf("Received a datagram. It says: %s", buffer);
+	    //n = sendto(sockfd, "Got a message. Was it from you?\n", MSG_SIZE, 0,
+    	//	      (struct sockaddr *)&addr, length);
+	    
+		if(n < 0)
+	 		error("sendto");
+
+		if((strcmp(buffer, "RTU1\n"))==0){
+			printf("Se recibio RTU\n");
+			fflush(stdout);
+			strcpy(buffer, "RTU1 recibio");
+			fflush(stdout);
+			n = sendto(sockfd, buffer, MSG_SIZE, 0,
+            (struct sockaddr *)&addr, length);
+			if(n < 0)
+			error("sendto");
+		}
+		if((strcmp(buffer, "RTU1 LED1\n"))==0){
+			printf("Encender LED1\n");
+			fflush(stdout);
+			//val = (rand()%10 ) + 1;
+			//printf("%d", val);
+			strcpy(buffer, "RTU1 recibio");
+			fflush(stdout);
+			n = sendto(sockfd, buffer, MSG_SIZE, 0,
+            (struct sockaddr *)&addr, length);
+			if(n < 0)
+			error("sendto");
+		}
+		if((strcmp(buffer, "RTU1 REPORTE\n"))==0){
+			printf("Encender LED1\n");
+			fflush(stdout);
+			//val = (rand()%10 ) + 1;
+			//printf("%d", val);
+			strcpy(buffer, "RTU1 recibio");
+			fflush(stdout);
+			n = sendto(sockfd, buffer, MSG_SIZE, 0,
+            (struct sockaddr *)&addr, length);
+			if(n < 0)
+			error("sendto");
+		}        
+		else{
+			printf("Se recibio basura\n");
+			fflush(stdout);
+		}
+
+	}
+
+}
 
 uint32_t timestamp (void){
     
@@ -84,6 +163,14 @@ uint32_t timestamp (void){
     myTime= time(NULL);
     return (uint32_t ) myTime; 
     
+}
+
+void ej_strtok(char *);
+
+void error(const char *msg)
+{
+    perror(msg);
+    exit(0);
 }
 
 //Timestep
@@ -100,6 +187,8 @@ void update_timestamp (void){
  
     return ;
 }
+
+
 
 //Funciones para orden de eventos
 void listar_eventos(void){
@@ -155,13 +244,13 @@ void alarma_alto_voltaje (void){
     char mensaje[64];
     static uint8_t last_alarm_status=0; 
     
-    if (voltajeadc > 2.5){
+    if (voltajeadc < 0.5){
         if(last_alarm_status == 0){
            //printf ("%ld\t %s\t Alarma de bajo voltaje detectado\t %0.2f\n", time_on, timestamp_str, voltajeadc);
-            sprintf (mensaje,"Alarma de alto voltaje detectado\t %0.2f", voltajeadc);
+            sprintf (mensaje,"Alarma de bajo voltaje detectado\t %0.2f", voltajeadc);
             agregar_evento(mensaje);
-            last_alarm_status =1;         
-       }
+            last_alarm_status =1;
+        }
         FLGB = 1;
         if(FLGB == 1){
             //last_alarm_status =1;
@@ -170,15 +259,14 @@ void alarma_alto_voltaje (void){
             delay(A);
             digitalWrite(13, LOW);
             delay(A);     
-            }              
-
+        }    
     }
-    else{
+
+    else {
         last_alarm_status=0;
         FLGB = 0;
     }
 }
-
 
 //Funcion principal
 int main(void){
@@ -187,32 +275,38 @@ int main(void){
 	pinMode(17, INPUT);
 	pinMode(19, INPUT);
 	pinMode(26, INPUT);
+    pinMode(12, INPUT);
     pinMode(13,OUTPUT);
     A = (1/1760)/2;
     pullUpDnControl(5, PUD_UP);
 	pullUpDnControl(17, PUD_UP);
 	pullUpDnControl(19, PUD_UP);
 	pullUpDnControl(26, PUD_UP);
+    digitalWrite(13, LOW);
 
 	wiringPiISR(5, INT_EDGE_BOTH, (void*)&Button1);
 	wiringPiISR(17, INT_EDGE_BOTH, (void*)&Button2);
 	wiringPiISR(19, INT_EDGE_BOTH, (void*)&Switch1);
 	wiringPiISR(26, INT_EDGE_BOTH, (void*)&Switch2);
+    wiringPiISR(12, INT_EDGE_BOTH, (void*)&iotarduino);
 
+    uint16_t ADCvalue;
+	//conectar_servidor();
+    //return 0;
+
+    pthread_t thread1, thread2;
+    //pthread_create(&thread1, NULL, (void*)&recibir , NULL);
+    pthread_create(&thread1, NULL, (void*)&RTU2, NULL);    
+
+	// Configura el SPI en la RPi
 	if(wiringPiSPISetup(SPI_CHANNEL, SPI_SPEED) < 0) {
 		printf("wiringPiSPISetup falló.\n");
 		return(-1);
 	}
 
-    uint16_t ADCvalue;
-	//conectar_servidor();
-    //return 0;
-    
-	// Configura el SPI en la RPi
-
 	while(1){
         time_on++;
-        
+                
         update_timestamp();
 		ADCvalue = get_ADC(ADC_CHANNEL);
     
@@ -228,18 +322,15 @@ int main(void){
         if ((time_on % 20 )==0){
             printf("Eventos pendientes:\n");
             listar_eventos();
+            if (n_eventos_pendientes_envio >0){
+           // conectar_servidor();
+            }
         }
 		sleep(1);
 	}
      
   return 0;   
 }
-
-
-
-
-// Entrada: ADC_chan 0
-// Salida: un entero "unsigned" de 16 bit  con el valor de la conversión
 
 uint16_t get_ADC(int ADC_chan)
 {
@@ -269,41 +360,74 @@ uint16_t get_ADC(int ADC_chan)
 void Button1(void){
     char mensaje[64];
 	PUSH2 = digitalRead(5);
-	if(PUSH2 == 0){
-		FLG1=1;
-	}		
-	if(PUSH2 == 1 && FLG1 == 1){	
-    	printf("Boton 1 funciona interrupción funcionando\n");
+	
+	if(PUSH2 == 1 ){
+    	sprintf(mensaje, "Boton 1 presionado\n");
 		fflush(stdout);
         agregar_evento(mensaje);
-		FLG1=0;
 	}
 }
 
 void Button2(void){
     char mensaje[64];
 	PUSH1 = digitalRead(17);
-	if(PUSH1 == 0){
-		FLG2=1;
-	}	
-	if(PUSH1 == 1 && FLG2 == 1){
-    	printf("Boton 2 funciona interrupción funcionando\n");
+    
+	if(PUSH1 == 1 ){
+    	sprintf(mensaje, "Boton 2 presionado\n");
+    //    printf(mensaje);
 		fflush(stdout);
         agregar_evento(mensaje);
-		FLG2=0;
 	}
 }
 
 void Switch1(void){
     char mensaje[64];
-	printf("Switch 1 funciona interrupción funcionando\n");
+    int switch1= digitalRead(19);
+    
+   // printf("Switch1 = %d\n", switch1);
+    if (switch1==1){
+	sprintf(mensaje,"Switch 1 apagado\n");
 	fflush(stdout);
     agregar_evento(mensaje);
+    }
+    if (switch1==0 ) {
+	sprintf(mensaje,"Switch 1 encendido\n");
+	fflush(stdout);
+    agregar_evento(mensaje);
+    }
+    
 }
 
 void Switch2(void){
     char mensaje[64];
-	printf("Switch 2 funciona interrupción funcionando\n");
+    int switch2= digitalRead(26);
+    
+	//printf("Switch2 = %d\n", switch2);
+    if (switch2==1){
+	sprintf(mensaje,"Switch 2 apagado\n");
 	fflush(stdout);
     agregar_evento(mensaje);
+    }
+    if (switch2==0 ) {
+	sprintf(mensaje, "Switch 2 encendido\n");
+	fflush(stdout);
+    agregar_evento(mensaje);
+    }
+}
+
+void iotarduino(void){
+    char mensaje[64];
+    int status_led_1= digitalRead(12);
+	//printf("Iot status LED = %d\n", status_led_1);
+    
+    if (status_led_1==1){
+	sprintf(mensaje, "Iot status LED  encendido\n");
+	fflush(stdout);
+    agregar_evento(mensaje);
+    }
+    if (status_led_1==0 ) {
+	sprintf(mensaje,"Iot status LED  apagado\n");
+	fflush(stdout);
+    agregar_evento(mensaje);
+    }
 }

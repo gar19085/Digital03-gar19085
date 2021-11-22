@@ -89,18 +89,42 @@ int main(int argc, char *argv[])
 		if(n < 0)
 	 		error("sendto");
 
-		if((strcmp(buffer, "hola\n"))==0){
-			printf("Se recibio hola\n");
+		if((strcmp(buffer, "RTU1\n"))==0){
+			printf("Se recibio RTU\n");
 			fflush(stdout);
 			//val = (rand()%10 ) + 1;
 			//printf("%d", val);
-			strcpy(buffer, "manda un 1 al FLG");
+			strcpy(buffer, "RTU1 recibio");
 			fflush(stdout);
 			n = sendto(sockfd, buffer, MSG_SIZE, 0,
             (struct sockaddr *)&addr, length);
 			if(n < 0)
 			error("sendto");
 		}
+		if((strcmp(buffer, "RTU1 LED1\n"))==0){
+			printf("Encender LED1\n");
+			fflush(stdout);
+			//val = (rand()%10 ) + 1;
+			//printf("%d", val);
+			strcpy(buffer, "RTU1 recibio");
+			fflush(stdout);
+			n = sendto(sockfd, buffer, MSG_SIZE, 0,
+            (struct sockaddr *)&addr, length);
+			if(n < 0)
+			error("sendto");
+		}
+		if((strcmp(buffer, "RTU1 REPORTE\n"))==0){
+			printf("Encender LED1\n");
+			fflush(stdout);
+			//val = (rand()%10 ) + 1;
+			//printf("%d", val);
+			strcpy(buffer, "RTU1 recibio");
+			fflush(stdout);
+			n = sendto(sockfd, buffer, MSG_SIZE, 0,
+            (struct sockaddr *)&addr, length);
+			if(n < 0)
+			error("sendto");
+		}        
 		else{
 			printf("Se recibio basura\n");
 			fflush(stdout);
