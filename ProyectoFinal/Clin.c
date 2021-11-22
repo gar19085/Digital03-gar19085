@@ -89,17 +89,53 @@ void enviar(void*ptr){
 		fgets(buffer,MSG_SIZE-1,stdin); // MSG_SIZE-1 because a null character is added        
 		if(buffer[0] != '!')
 		{
-			if((strcmp(buffer, "RTU1\n"))==0){	
+			if((strcmp(buffer, "RTU1 LED1 1\n"))==0){	
     			// Cambiamos a la dirección de broadcast
-				RTU.sin_addr.s_addr = inet_addr("192.168.0.255");	// broadcast address
+				RTU.sin_addr.s_addr = inet_addr("192.168.240.245");	// broadcast address
 				// send message to anyone out there...
 				n = sendto(sockfd1, buffer, strlen(buffer), 0,
 					  (const struct sockaddr *)&RTU, length);
 				if(n < 0)
 					error("Sendto");
 			}
-				if((strcmp(buffer, "RTU2\n"))==0){
-				RTU.sin_addr.s_addr = inet_addr("192.168.1.255");	
+			if((strcmp(buffer, "RTU1 LED1 0\n"))==0){	
+    			// Cambiamos a la dirección de broadcast
+				RTU.sin_addr.s_addr = inet_addr("192.168.240.245");	// broadcast address
+				// send message to anyone out there...
+				n = sendto(sockfd1, buffer, strlen(buffer), 0,
+					  (const struct sockaddr *)&RTU, length);
+				if(n < 0)
+					error("Sendto");
+			}			
+			if((strcmp(buffer, "RTU1 LED2 1\n"))==0){	
+    			// Cambiamos a la dirección de broadcast
+				RTU.sin_addr.s_addr = inet_addr("192.168.240.245");	// broadcast address
+				// send message to anyone out there...
+				n = sendto(sockfd1, buffer, strlen(buffer), 0,
+					  (const struct sockaddr *)&RTU, length);
+				if(n < 0)
+					error("Sendto");
+			}
+			if((strcmp(buffer, "RTU1 LED2 0\n"))==0){	
+    			// Cambiamos a la dirección de broadcast
+				RTU.sin_addr.s_addr = inet_addr("192.168.240.245");	// broadcast address
+				// send message to anyone out there...
+				n = sendto(sockfd1, buffer, strlen(buffer), 0,
+					  (const struct sockaddr *)&RTU, length);
+				if(n < 0)
+					error("Sendto");
+			}			
+			if((strcmp(buffer, "RTU1 REPORTE\n"))==0){	
+    			// Cambiamos a la dirección de broadcast
+				RTU.sin_addr.s_addr = inet_addr("192.168.240.245");	// broadcast address
+				// send message to anyone out there...
+				n = sendto(sockfd1, buffer, strlen(buffer), 0,
+					  (const struct sockaddr *)&RTU, length);
+				if(n < 0)
+					error("Sendto");
+			}						
+			if((strcmp(buffer, "RTU2\n"))==0){
+				RTU.sin_addr.s_addr = inet_addr("192.168.240.203");	
 			
 				n = sendto(sockfd1, buffer, strlen(buffer), 0,
 					  (const struct sockaddr *)&RTU, length);
