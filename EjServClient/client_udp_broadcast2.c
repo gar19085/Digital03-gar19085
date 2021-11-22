@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
 		error("Error setting socket options\n");
 
     // Cambiamos a la dirección de broadcast
-	anybody.sin_addr.s_addr = inet_addr("192.168.1.255");	// broadcast address
+	anybody.sin_addr.s_addr = inet_addr("192.168.0.255");	// broadcast address
 					// Es posible que se deba cambiar. Revisar con ifconfig
 
 	do
