@@ -19,7 +19,7 @@ char buffer[MSG_SIZE];	// to store received messages or messages to be sent.
 int boolval = 1;		// for a socket option
 
 //ESTE ES EL HISTORIADOR
-//void recibir(void*ptr);
+
 void enviar(void*ptr);
 
 void error(const char *msg)
@@ -78,7 +78,7 @@ void enviar(void*ptr){
     while(1){
 		memset(buffer, 0, MSG_SIZE);	// sets all values to zero
         printf("Los comandos son los siguientes:\n");
-		printf("Please enter the message (! to exit): \n");
+		printf("Please enter the message (! to exit): ");
 		fgets(buffer,MSG_SIZE-1,stdin); // MSG_SIZE-1 because a null character is added        
 		if(buffer[0] != '!')
 		{

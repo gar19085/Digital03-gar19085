@@ -40,7 +40,6 @@ int FLGB = 0;
 int FLG;
 int OFL;
 int sockfd, n;
-int val;
 unsigned int length;
 struct sockaddr_in server, addr;
 char buffer[MSG_SIZE];	// to store received messages or messages to be sent.
@@ -58,7 +57,7 @@ int socket_desc;
 	char *message;
     char server_reply[2000];
 */
-void RTU2(int argc, char *argv[]);
+void RTU2(void*ptr);
 
 void ej_strtok(char *);
 
@@ -69,22 +68,7 @@ void error(const char *msg)
 }
 
 //Conexión con historiador
-void RTU2(int argc, char *argv[]){
-	srand(time(0));
-
-	if(argc != 2)
-	{
-		printf("usage: %s port\n", argv[0]);
-		exit(0);
-	}
-	sockfd = socket(AF_INET, SOCK_DGRAM, 0); // Creates socket. Connectionless.
-	if(sockfd < 0)
-		error("Opening socket");
-
-	server.sin_family = AF_INET;		// symbol constant for Internet domain
-	server.sin_port = htons(atoi(argv[1]));		// port number
-	server.sin_addr.s_addr = htonl(INADDR_ANY); //inet_addr("192.168.1.255");	// para recibir de cualquier interfaz de red
-
+void RTU2(void*ptr){
 	length = sizeof(server);			// size of structure
 
 	// binds the socket to the address of the host and the port number
@@ -113,33 +97,39 @@ void RTU2(int argc, char *argv[]){
 		if(n < 0)
 	 		error("sendto");
 
-		if((strcmp(buffer, "RTU1\n"))==0){
+		if((strcmp(buffer, "RTU2\n"))==0){
 			printf("Se recibio RTU\n");
 			fflush(stdout);
-			strcpy(buffer, "RTU1 recibio");
+			strcpy(buffer, "RTU2 recibio");
 			fflush(stdout);
 			n = sendto(sockfd, buffer, MSG_SIZE, 0,
             (struct sockaddr *)&addr, length);
 			if(n < 0)
 			error("sendto");
 		}
-		if((strcmp(buffer, "RTU1 LED1\n"))==0){
+		if((strcmp(buffer, "RTU2 LED1\n"))==0){
 			printf("Encender LED1\n");
 			fflush(stdout);
-			//val = (rand()%10 ) + 1;
-			//printf("%d", val);
-			strcpy(buffer, "RTU1 recibio");
+			strcpy(buffer, "RTU2 LED1 = 1");
 			fflush(stdout);
 			n = sendto(sockfd, buffer, MSG_SIZE, 0,
             (struct sockaddr *)&addr, length);
 			if(n < 0)
 			error("sendto");
 		}
-		if((strcmp(buffer, "RTU1 REPORTE\n"))==0){
-			printf("Encender LED1\n");
+		if((strcmp(buffer, "RTU2 LED2\n"))==0){
+			printf("Encender LED2\n");
 			fflush(stdout);
-			//val = (rand()%10 ) + 1;
-			//printf("%d", val);
+			strcpy(buffer, "RTU2 LED2 = 1");
+			fflush(stdout);
+			n = sendto(sockfd, buffer, MSG_SIZE, 0,
+            (struct sockaddr *)&addr, length);
+			if(n < 0)
+			error("sendto");
+		}        
+		if((strcmp(buffer, "RTU2 REPORTE\n"))==0){
+			printf("Enviar Reporte\n");
+			fflush(stdout);
 			strcpy(buffer, "RTU1 recibio");
 			fflush(stdout);
 			n = sendto(sockfd, buffer, MSG_SIZE, 0,
@@ -153,7 +143,6 @@ void RTU2(int argc, char *argv[]){
 		}
 
 	}
-
 }
 
 uint32_t timestamp (void){
@@ -163,14 +152,6 @@ uint32_t timestamp (void){
     myTime= time(NULL);
     return (uint32_t ) myTime; 
     
-}
-
-void ej_strtok(char *);
-
-void error(const char *msg)
-{
-    perror(msg);
-    exit(0);
 }
 
 //Timestep
@@ -269,7 +250,7 @@ void alarma_alto_voltaje (void){
 }
 
 //Funcion principal
-int main(void){
+int main(int argc, char *argv[]){
     wiringPiSetupGpio();
     pinMode(5, INPUT);
 	pinMode(17, INPUT);
@@ -290,12 +271,27 @@ int main(void){
 	wiringPiISR(26, INT_EDGE_BOTH, (void*)&Switch2);
     wiringPiISR(12, INT_EDGE_BOTH, (void*)&iotarduino);
 
+	srand(time(0));
+
+	if(argc != 2)
+	{
+		printf("usage: %s port\n", argv[0]);
+		exit(0);
+	}
+
+	sockfd = socket(AF_INET, SOCK_DGRAM, 0); // Creates socket. Connectionless.
+	if(sockfd < 0)
+		error("Opening socket");
+
+	server.sin_family = AF_INET;		// symbol constant for Internet domain
+	server.sin_port = htons(atoi(argv[1]));		// port number
+	server.sin_addr.s_addr = htonl(INADDR_ANY); //inet_addr("192.168.1.255");	// para recibir de cualquier interfaz de red
+
     uint16_t ADCvalue;
 	//conectar_servidor();
     //return 0;
 
     pthread_t thread1, thread2;
-    //pthread_create(&thread1, NULL, (void*)&recibir , NULL);
     pthread_create(&thread1, NULL, (void*)&RTU2, NULL);    
 
 	// Configura el SPI en la RPi

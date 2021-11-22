@@ -92,8 +92,6 @@ int main(int argc, char *argv[])
 		if((strcmp(buffer, "RTU1\n"))==0){
 			printf("Se recibio RTU\n");
 			fflush(stdout);
-			//val = (rand()%10 ) + 1;
-			//printf("%d", val);
 			strcpy(buffer, "RTU1 recibio");
 			fflush(stdout);
 			n = sendto(sockfd, buffer, MSG_SIZE, 0,
