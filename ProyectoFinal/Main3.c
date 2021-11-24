@@ -34,7 +34,6 @@ uint8_t  switch2=0;
 uint16_t tiempo_buzzer_on = 0;
 uint8_t status_led_1= 0;
 char linea_status [128];
-char linea_evento[128];
 
 int A;
 int PUSH1 = 0;
@@ -42,8 +41,6 @@ int PUSH2 = 0;
 int FLG1 = 0;
 int FLG2 = 0;
 int FLGB = 0;
-int LD1 = 0;
-int LD2 = 0;
 
 int FLG;
 int OFL;
@@ -60,8 +57,7 @@ void Switch1(void);
 void Switch2(void);
 void iotarduino(void);
 
-void RTU1(void*ptr);
-void RTU1E(void*ptr);
+void RTU2(void*ptr);
 
 void ej_strtok(char *);
 
@@ -99,7 +95,7 @@ void update_timestamp (void){
 //Funciones para orden de eventos
 void listar_eventos(void){
     int i;
-    printf("listado eventos\n");
+    //printf("listado eventos\n");
     for (i=0; i< n_eventos_pendientes_envio; i++){
         //printf("%d = %s\n ", i, eventos_pendientes[i]);
         printf("%s\n",eventos_pendientes[i]);
@@ -107,22 +103,24 @@ void listar_eventos(void){
         n = sendto(sockfd, eventos_pendientes[i], MAX_NEVENTOS, 0,
         (struct sockaddr *)&addr, length);
 		if(n < 0)
-		error("sendto");        
+		error("sendto");             
     }
     n_eventos_pendientes_envio = 0;
 }
 
 void agregar_evento(uint8_t  evento_id){
+    char linea_evento[128];
     struct timeval current_time;
     gettimeofday(&current_time,NULL);
     numero_eventos++;
     update_timestamp ();
-    sprintf(linea_evento,"RTU1 %02d %s.%03d %d%d %d%d %d %d%d %0.2f\n", evento_id, timestamp_str, current_time.tv_usec/1000,  switch1 ,switch2, PUSH1,PUSH2,status_led_1 ,LD1, LD2,voltajeadc);
+    sprintf(linea_evento,"RTU2 %02d %s.%03d %d%d %d%d %d%d %0.2f\n", evento_id, timestamp_str, current_time.tv_usec/1000,  switch1 ,switch2, PUSH1,PUSH2,status_led_1 ,0 ,voltajeadc);
     printf("%s", linea_evento);
 //    printf("Evento agregado: %s\n", buffer);
     if(n_eventos_pendientes_envio < MAX_NEVENTOS){
         strcpy(eventos_pendientes[n_eventos_pendientes_envio ], linea_evento);
         n_eventos_pendientes_envio++;
+     //   printf("n_eventos_pendientes_envio = %ld\n", n_eventos_pendientes_envio);
     }
 }
 
@@ -144,7 +142,7 @@ void alarma_bajo_voltaje (void){
             agregar_evento(1);
             last_alarm_status =1;
           
-
+          
            
               
              activar_buzzer(10);  
@@ -156,6 +154,8 @@ void alarma_bajo_voltaje (void){
         FLGB = 0;
     }
 }
+
+
 
 void alarma_alto_voltaje (void){
     char mensaje[64];
@@ -171,13 +171,10 @@ void alarma_alto_voltaje (void){
         
        }
   }
-
     else {
         last_alarm_status=0;
-        FLGB = 0;
     }
 }
-
 
 
 //Funcion principal
@@ -219,6 +216,10 @@ int main(int argc, char *argv[]){
 	server.sin_family = AF_INET;		// symbol constant for Internet domain
 	server.sin_port = htons(atoi(argv[1]));		// port number
 
+    
+  	length = sizeof(server);			// size of structure
+
+	// binds the socket to the address of the host and the port number
 	if(bind(sockfd, (struct sockaddr *)&server, length) < 0)
 		error("Error binding socket.");
 
@@ -228,13 +229,10 @@ int main(int argc, char *argv[]){
 
    	server.sin_addr.s_addr = inet_addr(IP);                      //Cambiar IP MANUALMENTE
 
-
-    uint16_t ADCvalue;
-
     pthread_t thread1, thread2;
-    pthread_create(&thread1, NULL, (void*)&RTU1, NULL);     
+    pthread_create(&thread1, NULL, (void*)&RTU2, NULL);    
 
-
+  uint16_t ADCvalue;
 	// Configura el SPI en la RPi
 	if(wiringPiSPISetup(SPI_CHANNEL, SPI_SPEED) < 0) {
 		printf("wiringPiSPISetup falló.\n");
@@ -249,11 +247,11 @@ int main(int argc, char *argv[]){
      //  struct timeval current_time;
     //  gettimeofday(&current_time,NULL);
     //printf("%ld\t%s\t%0.2f\n", time_on, timestamp_str,voltajeadc);
-    if ((time_on %20) == 0){   
-    agregar_evento (0);
-    }
-        //sprintf(linea_status,"%d %d %s.%03d %d%d %d%d %d%d %0.2f\n", RTU, 0, timestamp_str, current_time.tv_usec/1000,  switch1 ,switch2, PUSH1,PUSH2,status_led_1 ,0 ,voltajeadc);
-        //printf("%s", linea_status);
+        if ((time_on %20) == 0){   
+        agregar_evento (0);
+        }
+    //    sprintf(linea_status,"%d %d %s.%03d %d%d %d%d %d%d %0.2f\n", RTU, 0, timestamp_str, current_time.tv_usec/1000,  switch1 ,switch2, PUSH1,PUSH2,status_led_1 ,0 ,voltajeadc);
+    //  printf("%s", linea_status);
         alarma_bajo_voltaje();
         alarma_alto_voltaje();
         
@@ -267,7 +265,7 @@ int main(int argc, char *argv[]){
 		fflush(stdout);
         if ((time_on % 20 )==0){
            // printf("Eventos pendientes:\n");
-           listar_eventos();
+            listar_eventos();
             if (n_eventos_pendientes_envio >0){
            // conectar_servidor();
             }
@@ -279,8 +277,7 @@ int main(int argc, char *argv[]){
 }
 
 //Conexión con historiador
-void RTU1(void*ptr){
-
+void RTU2(void*ptr){
 
 	while(1)
 	{
@@ -298,13 +295,13 @@ void RTU1(void*ptr){
 		if(n < 0)
 	 		error("sendto");
 
-		if((strcmp(buffer, "RTU1 LED1 1\n"))==0){
+		if((strcmp(buffer, "RTU2 LED1 1\n"))==0){
             char mensaje[64];
 			printf("Encender LED1\n");
 			fflush(stdout);
 
             digitalWrite(20, HIGH);
-            LD1 = 1;
+
             strcpy(buffer, "LED1 = 1");            
 			fflush(stdout);
 			n = sendto(sockfd, buffer, MSG_SIZE, 0,
@@ -312,17 +309,17 @@ void RTU1(void*ptr){
 			if(n < 0)
 			error("sendto");
 
-	        sprintf(mensaje,"LED indicador1  encendido\n");
-	        fflush(stdout);
+	        //sprintf(mensaje,"LED indicador1  encendido\n");
+	        //fflush(stdout);
             agregar_evento(11);
 		    }
-		if((strcmp(buffer, "RTU1 LED1 0\n"))==0){
+		if((strcmp(buffer, "RTU2 LED1 0\n"))==0){
             char mensaje[64];
 			printf("APAGAR LED1\n");
 			fflush(stdout);
 
             digitalWrite(20, LOW);
-            LD1 = 0;
+
             strcpy(buffer, "LED1 = 0");            
 			fflush(stdout);
 			n = sendto(sockfd, buffer, MSG_SIZE, 0,
@@ -330,17 +327,17 @@ void RTU1(void*ptr){
 			if(n < 0)
 			error("sendto");
 
-	        sprintf(mensaje,"LED indicador1 apagado\n");
-	        fflush(stdout);
+	        //sprintf(mensaje,"LED indicador1 apagado\n");
+	        //fflush(stdout);
             agregar_evento(12);
 		}        
-		if((strcmp(buffer, "RTU1 LED2 1\n"))==0){
+		if((strcmp(buffer, "RTU2 LED2 1\n"))==0){
             char mensaje[64];
 			printf("Encender LED2\n");
 			fflush(stdout);
 
             digitalWrite(21, HIGH);
-            LD2 = 1;
+
             strcpy(buffer, "LED2 = 1");            
 			fflush(stdout);
 			n = sendto(sockfd, buffer, MSG_SIZE, 0,
@@ -348,17 +345,17 @@ void RTU1(void*ptr){
 			if(n < 0)
 			error("sendto");
 
-	        sprintf(mensaje,"LED indicador2  encendido\n");
-	        fflush(stdout);
+	        //sprintf(mensaje,"LED indicador2  encendido\n");
+	        //fflush(stdout);
             agregar_evento(13);
 		    }
-		if((strcmp(buffer, "RTU1 LED2 0\n"))==0){
+		if((strcmp(buffer, "RTU2 LED2 0\n"))==0){
             char mensaje[64];
 			printf("APAGAR LED2\n");
 			fflush(stdout);
 
             digitalWrite(21, LOW);
-            LD2 = 0;
+
             strcpy(buffer, "LED2 = 0");            
 			fflush(stdout);
 			n = sendto(sockfd, buffer, MSG_SIZE, 0,
@@ -366,8 +363,8 @@ void RTU1(void*ptr){
 			if(n < 0)
 			error("sendto");
 
-	        sprintf(mensaje,"LED indicador2 apagado\n");
-	        fflush(stdout);
+	        //sprintf(mensaje,"LED indicador2 apagado\n");
+	        //fflush(stdout);
             agregar_evento(14);
 		}     
 	}
@@ -404,12 +401,12 @@ void Button1(void){
     int  status_B1;
     get_ADC(ADC_CHANNEL);
 	PUSH2 = !digitalRead(5);
-	status_B1=  0;  
+	status_B1=   00000000;  
     
 	if(PUSH2 == 1 ){
-        status_B1=  1;   //Estado del boton
-    	//sprintf(mensaje, "3\t %0.2f\n" ,voltajeadc);     //boton 1 presionado (3)
-		//fflush(stdout);
+        status_B1=   00000001;   //Estado del boton
+    //	sprintf(mensaje, "3\t %0.2f\n" ,voltajeadc);     //boton 1 presionado (3)
+//		fflush(stdout);
         agregar_evento(3);
 	}
 }
@@ -420,9 +417,9 @@ void Button2(void){
 	PUSH1 = !digitalRead(17);
     
 	if(PUSH1 == 1 ){
-    	//sprintf(mensaje, "4\t  %0.2f\n", voltajeadc);  //boton 2 presionado (4)
+    //sprintf(mensaje, "4\t  %0.2f\n", voltajeadc);  //boton 2 presionado (4)
     //    printf(mensaje);
-		fflush(stdout);
+	//	fflush(stdout);
         agregar_evento(4);
 	}
 }
@@ -434,8 +431,8 @@ void Switch1(void){
     
    // printf("Switch1 = %d\n", switch1);
     if (switch1==1){
-	//sprintf(mensaje,"5\t %s\t %0.2f\n",voltajeadc);          //alarna switch 1 apagado (5)
-	//fflush(stdout);
+//	sprintf(mensaje,"5\t %0.2f\n",voltajeadc);          //alarna switch 1 apagado (5)
+//fflush(stdout);
     agregar_evento(5);
     }
     if (switch1==0 ) {
@@ -452,20 +449,20 @@ void Switch2(void){
     
 	//printf("Switch2 = %d\n", switch2);
     if (switch2==1){
-	sprintf(mensaje,"7\t%0.2f\n", voltajeadc);                 //alarma switch 2 apagado (7)
-	fflush(stdout);
+	//sprintf(mensaje,"7\t%0.2f\n", voltajeadc);                 //alarma switch 2 apagado (7)
+	//fflush(stdout);
     agregar_evento(7);
     }
     if (switch2==0 ) {
-	sprintf(mensaje, "8\t %0.2f\n", voltajeadc);              //alarma switch 2 encendido (8)
-	fflush(stdout);
+	//sprintf(mensaje, "8\t %0.2f\n", voltajeadc);              //alarma switch 2 encendido (8)
+	//fflush(stdout);
     agregar_evento(8);
     }
 }
 
 void iotarduino(void){
     char mensaje[64];
-    status_led_1= digitalRead(12);                          //alarma Iot encendido (9),
+     status_led_1= digitalRead(12);                          //alarma Iot encendido (9),
      get_ADC(ADC_CHANNEL);
 	//printf("Iot status LED = %d\n", status_led_1);
     if (status_led_1==1){
@@ -479,5 +476,4 @@ void iotarduino(void){
     agregar_evento(10);
     }
 }
-
 

@@ -15,6 +15,7 @@
                             // Máxima de 3.6 MHz con VDD = 5V, 1.2 MHz con VDD = 2.7V
 #define ADC_CHANNEL       0	// Canal A/D del MCP3002 a usar, 0 ó 1
 #define MSG_SIZE 40	
+#define IP "192.168.0.26"
 
 
 //Variables
@@ -23,11 +24,18 @@ float voltajeadc=0;
 uint32_t time_on=0;
 char timestamp_str [26];
 uint32_t numero_eventos=0;
-#define MAX_NEVENTOS 100
+#define MAX_NEVENTOS 300
 char eventos_pendientes[MAX_NEVENTOS+1][64];
 uint16_t n_eventos_pendientes_envio =0;
 uint8_t boton1 =0;
 uint8_t boton2 =0;
+uint8_t  switch1=0;
+uint8_t  switch2=0;
+ uint8_t   Myswitch1 =0;
+uint16_t tiempo_buzzer_on = 0;
+uint8_t RTU =1;
+uint8_t status_led_1= 0;
+char linea_status [128];
 
 char bufferenviar[128];
 
@@ -54,7 +62,8 @@ void Switch1(void);
 void Switch2(void);
 void iotarduino(void);
 
-void RTU1(void*ptr);
+void RTU2(void*ptr);
+//void RTU2E(void*ptr);
 
 void ej_strtok(char *);
 
@@ -89,22 +98,30 @@ void update_timestamp (void){
 }
 
 
-
 //Funciones para orden de eventos
 void listar_eventos(void){
+
     int i;
     printf("listado eventos\n");
     for (i=0; i< n_eventos_pendientes_envio; i++){
         printf("%d = %s\n ", i, eventos_pendientes[i]);
+        //sprintf(listhistoriador, "%s\n", eventos_pendientes);
+
+        n = sendto(sockfd, eventos_pendientes[i], MAX_NEVENTOS, 0,
+        (struct sockaddr *)&addr, length);
+		if(n < 0)
+		error("sendto");     
     }
+    n_eventos_pendientes_envio = 0;
+    //memset(eventos_pendientes[i], 0, MAX_NEVENTOS);
 }
 
 void agregar_evento(char * msg){
     numero_eventos++;
     sprintf (bufferenviar,"RTU2\t %s\t %s", timestamp_str, msg);
-    printf("Evento agregado: %s\n", buffer);
+    printf("Evento agregado: %s\n", bufferenviar);
     if(n_eventos_pendientes_envio < MAX_NEVENTOS){
-        strcpy(eventos_pendientes[n_eventos_pendientes_envio ], buffer);
+        strcpy(eventos_pendientes[n_eventos_pendientes_envio], bufferenviar);
         n_eventos_pendientes_envio++;
         printf("n_eventos_pendientes_envio = %ld\n", n_eventos_pendientes_envio);
     }
@@ -209,14 +226,15 @@ int main(int argc, char *argv[]){
     uint16_t ADCvalue;
 
     pthread_t thread1, thread2;
-    pthread_create(&thread1, NULL, (void*)&RTU1, NULL);    
+    pthread_create(&thread1, NULL, (void*)&RTU2, NULL);   
+    //pthread_create(&thread2, NULL, (void*)&RTU2E, NULL); 
 
 	// Configura el SPI en la RPi
 	if(wiringPiSPISetup(SPI_CHANNEL, SPI_SPEED) < 0) {
 		printf("wiringPiSPISetup falló.\n");
 		return(-1);
 	}
-
+     
 	while(1){
         time_on++;
                 
@@ -242,7 +260,7 @@ int main(int argc, char *argv[]){
 }
 
 //Conexión con historiador
-void RTU1(void*ptr){
+void RTU2(void*ptr){
 	length = sizeof(server);			// size of structure
 
 	// binds the socket to the address of the host and the port number
@@ -253,7 +271,7 @@ void RTU1(void*ptr){
 	if(setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, &boolval, sizeof(boolval)) < 0)
    		error("Error setting socket options\n");
 
-   	server.sin_addr.s_addr = inet_addr("192.168.240.245");
+   	server.sin_addr.s_addr = inet_addr(IP);
 
 	while(1)
 	{
@@ -343,14 +361,54 @@ void RTU1(void*ptr){
 	        fflush(stdout);
             agregar_evento(mensaje);
 		}
-        if(){
-            n = sendto(sockfd, bufferenviar, MSG_SIZE, 0,
-            (struct sockaddr *)&addr, length);
-			if(n < 0)
-			error("sendto");  
-        }     
+       /* char listhistoriador[300];
+        strcpy(listhistoriador, "hola");
+        n = sendto(sockfd, listhistoriador, MAX_NEVENTOS, 0,
+        (struct sockaddr *)&addr, length);
+		if(n < 0)
+		error("sendto");    */
 	}
 }
+/*
+void RTU2E(void*ptr){
+	//length = sizeof(server);			// size of structure
+    int i
+   	server.sin_addr.s_addr = inet_addr(IP);
+    while(1){
+        /*if ((time_on % 20 )==0){
+            printf("Eventos pendientes:\n");
+            listar_eventos();
+            if (n_eventos_pendientes_envio >0){
+            }
+        }   
+            //memset(bufferenviar, 0, 128);
+        for (i=0; i< n_eventos_pendientes_envio; i++){
+            printf("%d = %s\n ", i, eventos_pendientes[i]);
+            n = sendto(sockfd, bufferenviar, 128, 0,
+            (struct sockaddr *)&addr, length);
+			if(n < 0)
+			error("sendto");            
+        }     
+               
+        for (size_t i = 0; i < count; i++){
+
+            n = sendto(sockfd, bufferenviar, 128, 0,
+            (struct sockaddr *)&addr, length);
+			if(n < 0)
+			error("sendto");    
+            }
+          
+    }
+}
+
+void listar_eventos(void){
+    int i;
+    printf("listado eventos\n");
+    for (i=0; i< n_eventos_pendientes_envio; i++){
+        printf("%d = %s\n ", i, eventos_pendientes[i]);
+    }
+}
+*/
 
 uint16_t get_ADC(int ADC_chan)
 {
