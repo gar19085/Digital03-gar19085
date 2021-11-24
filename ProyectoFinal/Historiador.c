@@ -12,9 +12,9 @@
 
 #define MSG_SIZE 40			// message size
 
-int sockfd, n;
+int sockfd1,sockfd2, n;
 unsigned int length;
-struct sockaddr_in anybody, from;
+struct sockaddr_in RTU, from1;
 char buffer[MSG_SIZE];	// to store received messages or messages to be sent.
 int boolval = 1;		// for a socket option
 
@@ -40,53 +40,118 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	sockfd = socket(AF_INET, SOCK_DGRAM, 0); // Creates socket. Connectionless.
-	if(sockfd < 0)
+	sockfd1 = socket(AF_INET, SOCK_DGRAM, 0); // Creates socket. Connectionless.
+	if(sockfd1 < 0)
 		error("Error: socket");
 
-	anybody.sin_family = AF_INET;		// symbol constant for Internet domain
-	anybody.sin_port = htons(atoi(argv[1]));	 // port number
-	anybody.sin_addr.s_addr = htonl(INADDR_ANY); // para recibir de cualquier interfaz de red
+	/*sockfd2 = socket(AF_INET, SOCK_DGRAM, 0); // Creates socket. Connectionless.
+	if(sockfd2 < 0)
+		error("Error: socket");
+*/
+	RTU.sin_family = AF_INET;		// symbol constant for Internet domain
+	RTU.sin_port = htons(atoi(argv[1]));	 // port number
+	//RTU.sin_addr.s_addr = htonl(INADDR_ANY); // para recibir de cualquier interfaz de red
 
 	length = sizeof(struct sockaddr_in);		 // size of structure
 
 	// Sin el bind, no se reciben los mensajes propios
-	if(bind(sockfd, (struct sockaddr *)&anybody, length) < 0)
+	if(bind(sockfd1, (struct sockaddr *)&RTU, length) < 0)
 		error("Error binding socket.");
 
 	// change socket permissions to allow broadcast
-	if(setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, &boolval, sizeof(boolval)) < 0)
+	if(setsockopt(sockfd1, SOL_SOCKET, SO_BROADCAST, &boolval, sizeof(boolval)) < 0)
 		error("Error setting socket options\n");
 
-    // Cambiamos a la dirección de broadcast
-	anybody.sin_addr.s_addr = inet_addr("192.168.0.255");	// broadcast address
+	printf("Los comandos son los siguientes:\n");
 
     while(1){
-        memset(buffer, 0, MSG_SIZE);
+
         memset(buffer, 0, MSG_SIZE);
 		// receive message
-		n = recvfrom(sockfd, buffer, MSG_SIZE, 0, (struct sockaddr *)&from, &length);
+		n = recvfrom(sockfd1, buffer, MSG_SIZE, 0, (struct sockaddr *)&from1, &length);
 		if(n < 0)
 			error("recvfrom");
-		printf("Received something: %s\n", buffer);
-    }
-	
+		printf("Received from RTU: %s\n", buffer);
+
+		/*
+		memset(buffer, 0, MSG_SIZE);
+		n = recvfrom(sockfd1, buffer, MSG_SIZE, 0, (struct sockaddr *)&from1, &length);
+		if(n < 0)
+			error("recvfrom");
+		printf("Received from RTU2: %s\n", buffer);*/		
+    }	
 }
 
 void enviar(void*ptr){
 
     while(1){
 		memset(buffer, 0, MSG_SIZE);	// sets all values to zero
-        printf("Los comandos son los siguientes:\n");
-		printf("Please enter the message (! to exit): ");
+		printf("Please enter the message (! to exit): \n");
 		fgets(buffer,MSG_SIZE-1,stdin); // MSG_SIZE-1 because a null character is added        
 		if(buffer[0] != '!')
 		{
-			// send message to anyone out there...
-			n = sendto(sockfd, buffer, strlen(buffer), 0,
-					  (const struct sockaddr *)&anybody, length);
-			if(n < 0)
-				error("Sendto");
+			if((strcmp(buffer, "RTU1 LED1 1\n"))==0){	
+    			// Cambiamos a la dirección de broadcast
+				RTU.sin_addr.s_addr = inet_addr("192.168.240.203");	// broadcast address
+				// send message to anyone out there...
+				n = sendto(sockfd1, buffer, strlen(buffer), 0,
+					  (const struct sockaddr *)&RTU, length);
+				if(n < 0)
+					error("Sendto");
+			}
+			if((strcmp(buffer, "RTU1 LED1 0\n"))==0){	
+    			// Cambiamos a la dirección de broadcast
+				RTU.sin_addr.s_addr = inet_addr("192.168.240.203");	// broadcast address
+				// send message to anyone out there...
+				n = sendto(sockfd1, buffer, strlen(buffer), 0,
+					  (const struct sockaddr *)&RTU, length);
+				if(n < 0)
+					error("Sendto");
+			}			
+			if((strcmp(buffer, "RTU1 LED2 1\n"))==0){	
+    			// Cambiamos a la dirección de broadcast
+				RTU.sin_addr.s_addr = inet_addr("192.168.240.203");	// broadcast address
+				// send message to anyone out there...
+				n = sendto(sockfd1, buffer, strlen(buffer), 0,
+					  (const struct sockaddr *)&RTU, length);
+				if(n < 0)
+					error("Sendto");
+			}
+			if((strcmp(buffer, "RTU1 LED2 0\n"))==0){	
+    			// Cambiamos a la dirección de broadcast
+				RTU.sin_addr.s_addr = inet_addr("192.168.240.203");	// broadcast address
+				// send message to anyone out there...
+				n = sendto(sockfd1, buffer, strlen(buffer), 0,
+					  (const struct sockaddr *)&RTU, length);
+				if(n < 0)
+					error("Sendto");
+			}				
+			if((strcmp(buffer, "RTU2\n"))==0){
+				RTU.sin_addr.s_addr = inet_addr("192.168.240.245");	
+			
+				n = sendto(sockfd1, buffer, strlen(buffer), 0,
+					  (const struct sockaddr *)&RTU, length);
+				if(n < 0)
+					error("Sendto");			
+			}
+			if((strcmp(buffer, "RTU2 LED1 1\n"))==0){	
+    			// Cambiamos a la dirección de broadcast
+				RTU.sin_addr.s_addr = inet_addr("192.168.240.245");	// broadcast address
+				// send message to anyone out there...
+				n = sendto(sockfd1, buffer, strlen(buffer), 0,
+					  (const struct sockaddr *)&RTU, length);
+				if(n < 0)
+					error("Sendto");
+			}
+			if((strcmp(buffer, "RTU2 LED1 0\n"))==0){	
+    			// Cambiamos a la dirección de broadcast
+				RTU.sin_addr.s_addr = inet_addr("192.168.240.245");	// broadcast address
+				// send message to anyone out there...
+				n = sendto(sockfd1, buffer, strlen(buffer), 0,
+					  (const struct sockaddr *)&RTU, length);
+				if(n < 0)
+					error("Sendto");
+			}						
         }
     
     }
